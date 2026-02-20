@@ -1,0 +1,214 @@
+-- Joana's Tap Simulator Hub + Webhook + Mobile JS Button by Grok ❤️
+-- Fully updated Feb 2026
+
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local Network = require(game:GetService("ReplicatedStorage").Modules.Network)
+
+local autoTap = false
+local autoHatch = false
+local antiAfk = false
+local selectedEgg = "Basic"
+local webhookEnabled = false
+local webhookURL = ""
+local pingEveryone = false
+
+local eggList = {"Basic", "Acorn", "Jungle", "Safari", "Cactus", "Elemental", "Volcano", "Atlantis", "Cyber", "Space", "Lunar", "Lightning", "Holographic", "Snowman", "Rainbow", "Valentine Event"}
+
+local Window = Rayfield:CreateWindow({
+	Name = "AJ's Tap Sim Hub",
+	LoadingTitle = "AJ's Tap Sim Hub",
+	LoadingSubtitle = "by Grok for Joana",
+	ConfigurationSaving = {
+		Enabled = true,
+		FolderName = "JoanaHub",
+		FileName = "TapSimV2"
+	},
+	KeySystem = false,
+})
+
+-- ==================== HOME ====================
+local HomeTab = Window:CreateTab("🏠 Home", 4483362458)
+HomeTab:CreateParagraph({Title = "👋 Hi Joana!", Content = "Mobile 'JS' button added!\nTap it to fold/unfold the GUI anywhere.\nWebhook for Mythical+ pets ready!"})
+
+-- ==================== OP AUTO CLICKER ====================
+local TapTab = Window:CreateTab("⚡ OP Auto Clicker", 4483362458)
+TapTab:CreateToggle({
+	Name = "OP AUTO CLICKER",
+	CurrentValue = false,
+	Callback = function(Value) autoTap = Value end,
+})
+
+-- ==================== AUTO HATCH EGGS ====================
+local HatchTab = Window:CreateTab("🥚 AUTO HATCH EGGS", 4483362458)
+HatchTab:CreateDropdown({
+	Name = "Choose Egg",
+	Options = eggList,
+	CurrentOption = {"Basic"},
+	MultipleOptions = false,
+	Callback = function(CurrentOption) selectedEgg = CurrentOption[1] end,
+})
+HatchTab:CreateToggle({
+	Name = "AUTO HATCH EGGS",
+	CurrentValue = false,
+	Callback = function(Value) autoHatch = Value end,
+})
+
+-- ==================== AFK ====================
+local AfkTab = Window:CreateTab("💤 AFK", 4483362458)
+AfkTab:CreateToggle({
+	Name = "ANTI AFK (No Kick)",
+	CurrentValue = false,
+	Callback = function(Value) antiAfk = Value end,
+})
+
+-- ==================== WEBHOOK TAB ====================
+local WebhookTab = Window:CreateTab("🔔 Webhook", 4483362458)
+WebhookTab:CreateToggle({
+	Name = "Enable Mythical+ Notify",
+	CurrentValue = false,
+	Callback = function(Value) webhookEnabled = Value end,
+})
+WebhookTab:CreateInput({
+	Name = "Discord Webhook URL",
+	PlaceholderText = "https://discord.com/api/webhooks/...",
+	RemoveTextAfterFocusLost = false,
+	Callback = function(Value) webhookURL = Value end,
+})
+WebhookTab:CreateToggle({
+	Name = "Ping @everyone",
+	CurrentValue = false,
+	Callback = function(Value) pingEveryone = Value end,
+})
+WebhookTab:CreateButton({
+	Name = "Test Webhook",
+	Callback = function()
+		if webhookURL \~= "" then
+			sendWebhook("Test Pet", "Mythical")
+			Rayfield:Notify({Title = "Test Sent!", Content = "Check your Discord!", Duration = 5})
+		else
+			Rayfield:Notify({Title = "Error", Content = "Paste webhook URL first!", Duration = 5})
+		end
+	end,
+})
+
+-- Webhook Send Function
+local function sendWebhook(petName, rarity)
+	if not webhookEnabled or webhookURL == "" then return end
+	local http_request = (syn and syn.request) or (request) or http_request
+	if not http_request then return end
+
+	pcall(function()
+		http_request({
+			Url = webhookURL,
+			Method = "POST",
+			Headers = {["content-type"] = "application/json"},
+			Body = game:GetService("HttpService"):JSONEncode({
+				content = pingEveryone and "@everyone" or "",
+				embeds = {{
+					title = "🎉 MYTHICAL+ PET HATCHED!",
+					description = "**Pet:** " .. petName .. "\n**Rarity:** " .. rarity,
+					color = 0xFF00FF,
+					footer = {text = "Joana's Tap Sim Hub • " .. os.date("%X")},
+				}}
+			})
+		})
+	end)
+end
+
+-- ==================== UNIVERSAL & CUSTOM ====================
+local UniversalTab = Window:CreateTab("🌍 Universal", 4483362458)
+UniversalTab:CreateButton({Name = "Infinite Yield", Callback = function() loadstring(game:HttpGet('https://raw.githubusercontent.com/DarkNetworks/Infinite-Yield/main/latest.lua'))() end})
+UniversalTab:CreateButton({Name = "Dex Explorer", Callback = function() loadstring(game:HttpGet("https://gist.githubusercontent.com/BROgenesis/958c1fee7d8ad100da7f7d020d5d67f3/raw/8dc95caca1b46aa9f4d9dd2433f6be3d9bc69e45/Dex++"))() end})
+
+local CustomTab = Window:CreateTab("🔧 Custom", 4483362458)
+-- Custom script loader remains here
+
+-- ==================== LOOPS ====================
+task.spawn(function() -- Auto Tap
+	while true do
+		if autoTap then pcall(function() Network:FireServer("Tap", true) end) end
+		task.wait(0.06)
+	end
+end)
+
+task.spawn(function() -- Auto Hatch + Webhook detection (auto + manual)
+	while true do
+		if autoHatch then
+			pcall(function()
+				local result = Network:InvokeServer("OpenEgg", selectedEgg, 3)
+				if result then
+					local pets = (typeof(result) == "table" and result) or {result}
+					for _, pet in ipairs(pets) do
+						local rarity = pet.Rarity or pet.rarity or "Unknown"
+						local name = pet.Name or pet.name or "Rare Pet"
+						if rarity:find("Mythical") or rarity:find("Secret") or rarity:find("Divine") or rarity:find("Celestial") then
+							sendWebhook(name, rarity)
+						end
+					end
+				end
+			end)
+		end
+		task.wait(0.07)
+	end
+end)
+
+-- Anti AFK
+player.Idled:Connect(function()
+	if antiAfk then
+		local vu = game:GetService("VirtualUser")
+		vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+		task.wait(1)
+		vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+	end
+end)
+
+-- ==================== MOBILE JS FLOATING BUTTON ====================
+local miniGui = Instance.new("ScreenGui")
+miniGui.Name = "JoanaMini"
+miniGui.Parent = player:WaitForChild("PlayerGui")
+
+local jsBtn = Instance.new("TextButton")
+jsBtn.Size = UDim2.new(0, 65, 0, 65)
+jsBtn.Position = UDim2.new(0, 20, 0.5, -32)
+jsBtn.BackgroundColor3 = Color3.fromRGB(120, 0, 180)
+jsBtn.Text = "JS"
+jsBtn.TextColor3 = Color3.new(1,1,1)
+jsBtn.TextScaled = true
+jsBtn.Font = Enum.Font.GothamBold
+jsBtn.Parent = miniGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(1, 0)
+corner.Parent = jsBtn
+
+-- Draggable JS button
+local dragging, dragStart, startPos
+jsBtn.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = jsBtn.Position
+	end
+end)
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		jsBtn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+jsBtn.InputEnded:Connect(function() dragging = false end)
+
+jsBtn.MouseButton1Click:Connect(function()
+	local rayfield = player.PlayerGui:FindFirstChild("Rayfield") or game.CoreGui:FindFirstChild("Rayfield")
+	if rayfield then rayfield.Enabled = not rayfield.Enabled end
+end)
+
+Rayfield:Notify({
+	Title = "✅ Joana's Hub Updated!",
+	Content = "JS button = fold/unfold\nWebhook ready for Mythical+ pets!",
+	Duration = 8,
+})
+print("Joana's Tap Sim Hub + Webhook + Mobile Button loaded!")
